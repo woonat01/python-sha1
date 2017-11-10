@@ -141,6 +141,86 @@ class Sha1Hash(object):
         return _process_chunk(message[64:], *h)
 
 
+class Sha1HashModified(object):
+    """A class that mimics that hashlib api and implements the SHA-1 algorithm."""
+
+    name = 'python-sha1'
+    digest_size = 20
+    block_size = 64
+
+    def __init__(self):
+        # modified digest variables 1987bdf4bf8b5083db3c0ee34daedb8b3d5e99ce
+        self._h = (
+            0x1987BDF4,
+            0xBF8B5083,
+            0xDB3C0EE3,
+            0x4DAEDB8B,
+            0x3D5E99CE,
+        )
+
+
+        # bytes object with 0 <= len < 64 used to store the end of the message
+        # if the message length is not congruent to 64
+        self._unprocessed = b''
+        # Length in bytes of all data that has been processed so far
+        self._message_byte_length = 0
+
+    def update(self, arg):
+        """Update the current digest.
+
+        This may be called repeatedly, even after calling digest or hexdigest.
+
+        Arguments:
+            arg: bytes, bytearray, or BytesIO object to read from.
+        """
+        if isinstance(arg, (bytes, bytearray)):
+            arg = io.BytesIO(arg)
+
+        # Try to build a chunk out of the unprocessed data, if any
+        chunk = self._unprocessed + arg.read(64 - len(self._unprocessed))
+
+        # Read the rest of the data, 64 bytes at a time
+        while len(chunk) == 64:
+            self._h = _process_chunk(chunk, *self._h)
+            self._message_byte_length += 64
+            chunk = arg.read(64)
+
+        self._unprocessed = chunk
+        return self
+
+    def digest(self):
+        """Produce the final hash value (big-endian) as a bytes object"""
+        return b''.join(struct.pack(b'>I', h) for h in self._produce_digest())
+
+    def hexdigest(self):
+        """Produce the final hash value (big-endian) as a hex string"""
+        return '%08x%08x%08x%08x%08x' % self._produce_digest()
+
+    def _produce_digest(self):
+        """Return finalized digest variables for the data processed so far."""
+        # Pre-processing:
+        message = self._unprocessed
+        message_byte_length = self._message_byte_length + len(message)
+
+        # append the bit '1' to the message
+        message += b'\x80'
+
+        # append 0 <= k < 512 bits '0', so that the resulting message length (in bytes)
+        # is congruent to 56 (mod 64)
+        message += b'\x00' * ((56 - (message_byte_length + 1) % 64) % 64)
+
+        # append length of message (before pre-processing), in bits, as 64-bit big-endian integer
+        message_bit_length = message_byte_length * 8
+        message += struct.pack(b'>Q', message_bit_length)
+
+        # Process the final chunk
+        # At this point, the length of the message is either 64 or 128 bytes.
+        h = _process_chunk(message[:64], *self._h)
+        if len(message) == 64:
+            return h
+        return _process_chunk(message[64:], *h)
+
+
 def sha1(data):
     """SHA-1 Hashing Function
 
@@ -153,8 +233,22 @@ def sha1(data):
         A hex SHA-1 digest of the input message.
     """
     return Sha1Hash().update(data).hexdigest()
-    
-    
+
+
+def sha1Modified(data):
+    """SHA-1 Hashing Function
+
+    A custom SHA-1 hashing function implemented entirely in Python.
+
+    Arguments:
+        data: A bytes or BytesIO object containing the input message to hash.
+
+    Returns:
+        A hex SHA-1 digest of the input message.
+    """
+    return Sha1HashModified().update(data).hexdigest()
+
+
 if __name__ == '__main__':
     # Imports required for command line parsing. No need for these elsewhere
     import argparse

@@ -1,0 +1,5 @@
+nate@OMA-AA108203:/mnt/c/Users/woonat01/python-sha1$ openssl enc -aes-128-cbc -k secret -P -md sha1
+salt=8CAD83560DB70C54
+key=A1852D554F5528A2A949FAC01087E6C9
+iv =8FFA78E6CB8E182B23C8A5F00913A5D7
+source: https://www.ibm.com/support/knowledgecenter/en/SSLVY3_9.7.0/com.ibm.einstall.doc/topics/t_einstall_GenerateAESkey.html

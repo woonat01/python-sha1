@@ -42,39 +42,19 @@ macSize = len(mac * 8)
 print("macSize: " + str(macSize))
 
 # pad in bits - convert to bytes
-pad = int((1024-(keySize+messageSize))/8)  # (macSize % 512)
+pad = int((1024-(keySize+messageSize))/8)
 
 print("Pad Size: " + str(pad))
-# padding = start of padding + 0 padding * pad - leave length for beginning and length definition of pad
+# padding = start of padding + \x00 padding * pad - leave length for beginning and length definition of pad
 # must present hex as binary "b'x'"
+# I believe my pad size to be 16 == 128 bits == \x80 in hex
 # I have tried many combinations of pad lengths. Can't quite figure out what to put in as the pad.
-padding = b'\x80' + (b'\x00' * (pad - 0)) + b'\x80'
+padding = b'\x80' + (b'\x00' * (pad - 2)) + b'\x80'
 
 previousMac = key + message
 
 macAttack = bytes(previousMac, 'utf-8') + padding + bytes(newMessage, 'utf-8')
 print("macAttack: " + str(macAttack))
 newMac = sha1.sha1(macAttack)
+# newMac should == mac
 print("newMac: " + str(newMac))
-
-
-'''i = 1
-for i in range (0, 512):
-
-    pad = i  # (macSize % 64)
-    print("Pad Size: " + str(pad))
-
-    padding = '\x80' + '\x00' * pad
-
-    macAttack = bytes((key + message + "\n" + padding + newMessage), 'utf-8')
-    #macAttack = bytes((newMessage + padding + "\n" ), 'utf-8')
-
-    newMac = sha1.sha1(macAttack)
-    print("sha1 digest original key + message: " + sha1.sha1(mac))
-    #print("macAttack: " + str(macAttack))
-    print("newMac: " + str(newMac))
-    if newMac == origMac:
-        print("SUCCESS")
-        break
-    i += 1
-'''
